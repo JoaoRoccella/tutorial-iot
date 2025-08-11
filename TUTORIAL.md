@@ -209,6 +209,7 @@ Você deve ver as leituras de temperatura e umidade sendo exibidas no monitor se
 ## Instalando um broker MQTT no Raspberry Pi
 
 Para enviar os dados do sensor DHT11 para a nuvem, vamos instalar um broker MQTT no Raspberry Pi. O Mosquitto é uma opção popular e fácil de usar. Siga os passos abaixo:
+
 1. No terminal do Raspberry Pi, instale o Mosquitto com o seguinte comando:
    ```bash
    sudo apt install mosquitto mosquitto-clients -y
@@ -235,6 +236,45 @@ Para enviar os dados do sensor DHT11 para a nuvem, vamos instalar um broker MQTT
     mosquitto_sub -h localhost -t "test/topic"
     ```
    Você deve ver a mensagem "Hello, MQTT!" sendo exibida.
+
+### Habilitando a persistência do Mosquitto
+
+Para garantir que os dados publicados no broker MQTT sejam persistentes, você pode habilitar a persistência no Mosquitto. Isso significa que, mesmo após reiniciar o serviço ou o Raspberry Pi, as mensagens publicadas serão mantidas. Isso é útil para garantir que os dados não sejam perdidos. O Mosquitto armazena as mensagens em um diretório específico utilizando um arquivo de log. Para habilitar a persistência, siga os passos abaixo: 
+
+1. Abra o arquivo de configuração do Mosquitto:
+   ```bash
+   sudo nano /etc/mosquitto/mosquitto.conf
+   ```
+
+2. Adicione as seguintes linhas ao final do arquivo para habilitar a persistência:
+   ```plaintext
+    persistence true
+    persistence_location /var/lib/mosquitto/
+    log_dest file /var/log/mosquitto/mosquitto.log
+    log_dest stdout
+    log_type all
+    allow_anonymous true
+   ```
+
+3. Salve e feche o arquivo (no nano, pressione `CTRL + X`, depois `Y` e `Enter`).
+
+4. Reinicie o serviço Mosquitto para aplicar as alterações:
+   ```bash
+   sudo systemctl restart mosquitto
+   ```
+
+5. Verifique se a persistência está funcionando corretamente publicando uma mensagem de teste novamente:
+   ```bash
+    mosquitto_pub -h localhost -t "test/topic" -m "Hello, MQTT with persistence!"
+   ```
+
+6. Em outro terminal, execute o comando de assinatura para verificar se a mensagem foi recebida:
+    ```bash
+    mosquitto_sub -h localhost -t "test/topic"
+    ```
+
+    Você deve ver a mensagem "Hello, MQTT with persistence!" sendo exibida, confirmando que a persistência está funcionando corretamente. A diferença é que agora, mesmo que o Mosquitto seja reiniciado, as mensagens publicadas serão mantidas no diretório de persistência especificado.
+
 
 ## Enviando dados do DHT11 para o broker MQTT
 
@@ -284,9 +324,43 @@ finally:
     ```
     Você deve ver as leituras de temperatura e umidade sendo exibidas no terminal a cada 2 segundos.
 
-## Armazenamento dos dados no banco de dados
+### Desafio: publicando dados em um broker MQTT remoto
 
-Para armazenar os dados do sensor DHT11 em um banco de dados, vamos usar o SQLite, que é leve e fácil de configurar. Siga os passos abaixo:
+Você deverá publicar os dados do sensor DHT11 em um broker MQTT remoto, o HiveMQ, que é um serviço gratuito de broker MQTT. Para isso, siga os passos abaixo:
+
+
+1. No arquivo `dht11_mqtt.py`, modifique as configurações do broker MQTT para usar o HiveMQ:
+    ```python
+    MQTT_BROKER = "339b63a59e2748728069335a1b73efea.s1.eu.hivemq.cloud"
+    MQTT_PORT = 8883
+    MQTT_TOPIC = "/sensor/dht11/setor_x"  # Substitua o "x" pelo numero do seu grupo
+    MQTT_USERNAME = "seu_usuario"  # Substitua pelo seu usuário do HiveMQ
+    MQTT_PASSWORD = "sua_senha"  # Substitua pela sua senha do HiveMQ   
+    ```
+2. Adicione as seguintes linhas após a inicialização do cliente MQTT para configurar o usuário e senha:
+    ```python
+    client.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+    client.tls_set()  # Configura TLS para conexão segura
+    ```
+3. Faça o upload do código modificado para o Arduino novamente:
+    ```bash
+    arduino-cli upload -p /dev/ttyUSB0 --fqbn arduino:avr:uno dht11.ino
+    ```
+4. Execute o script Python novamente:
+    ```bash
+    python dht11_mqtt.py
+    ```
+5. Abra outro terminal e execute o comando para assinar o tópico MQTT no HiveMQ:
+    ```bash
+    mosquitto_sub -h 339b63a59e2748728069335a1b73efea.s1.eu.hivemq.cloud -p 8883 -t "/sensor/dht11/setor_x" --cafile /etc/ssl/certs/ca-certificates.crt -u seu_usuario -P sua_senha
+    ```
+    Substitua `seu_usuario` e `sua_senha` pelos seus dados do HiveMQ. Você deve ver as leituras de temperatura e umidade sendo exibidas no terminal a cada 2 segundos.
+
+
+## Armazenamento dos dados em um banco de dados
+
+Em algumas situações, somente a persistência do broker MQTT não é suficiente, pois você pode precisar de uma forma mais estruturada de armazenar e consultar os dados. Para isso, vamos usar um banco de dados SQLite para armazenar as leituras do sensor DHT11. O SQLite é um banco de dados leve e fácil de usar, ideal para projetos pequenos como este. Siga os passos abaixo para configurar o armazenamento dos dados: 
+
 1. No Raspberry Pi, instale o SQLite com o seguinte comando:
     ```bash
     sudo apt install sqlite3 -y
@@ -377,6 +451,13 @@ def get_leituras():
    ```
 4. Abra um navegador e acesse `http://localhost:8000/leituras`. Você deve ver as últimas 10 leituras de temperatura e umidade em formato JSON.
 
+### Desafio: obtendo dados históricos
+
+1. Crie uma rota adicional na API para obter dados históricos de temperatura e umidade. A rota deve aceitar parâmetros de data inicial e final para filtrar as leituras. Por exemplo, a rota pode ser `/leituras/historico?inicio=2023-01-01&fim=2023-01-31`.
+
+2. Crie algumas rotas adicionais na API para obter dados historicos de temperatura e umidade, semelhante à rota anterior, mas que possa ser consultada por um período predefinido, como as últimas 24 horas ou os últimos 7 dias. Por exemplo, a rota pode ser `/leituras/historico/24h`, `/leituras/historico/7d`, etc.
+
+
 ## Consumindo a API RESTful com uma aplicação Mobile
 
 Para consumir a API RESTful criada no notebook, você pode usar uma aplicação mobile. Vamos criar um exemplo simples usando o React Native, que é uma biblioteca popular para desenvolvimento de aplicativos móveis. Siga os passos abaixo:
@@ -440,7 +521,9 @@ const styles = StyleSheet.create({
 });
 export default App;
 ```
+
 5. Substitua `<endereço_IP_do_notebook>` pelo endereço IP do notebook onde a API FastAPI está rodando.
+
 6. Execute o aplicativo React Native com o seguinte comando:
    ```bash
    npx react-native run-android
@@ -449,6 +532,7 @@ export default App;
    ```bash
    npx react-native run-ios
    ```
+
 7. Para instalar o app em seu celular, você pode usar o Expo ou criar um APK para Android. Consulte a documentação do React Native para mais detalhes sobre como fazer isso.
 
 
