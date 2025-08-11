@@ -57,15 +57,32 @@ Antes de iniciarmos as configurações do Raspberry Pi, é necessário que você
 ## Configuração do Raspberry Pi
 
 Agora que você tem o cartão microSD preparado, insira-o no Raspberry Pi e ligue-o. O Raspberry Pi deve iniciar automaticamente e conectar-se ao hotspot Wi-Fi criado anteriormente. Siga os passos abaixo para configurar o Raspberry Pi:
+
 1. Conecte o Raspberry Pi à fonte de alimentação e aguarde alguns minutos para que ele inicie completamente.
+
 2. Verifique na tela do seu notebook se o Raspberry Pi está conectado ao hotspot Wi-Fi. Você pode visualizar os dispositivos conectados no painel de controle do hotspot.
+
 3. Abra um terminal no seu notebook e conecte-se ao Raspberry Pi via SSH usando o comando:
-   ```bash
-   ssh <usuario>@<endereço_IP_do_Raspberry_Pi>
-   ```
-   Substitua `<usuario>` pelo usuário configurado na imagem do SO gravado no cartão microSD (aquele editado em "definições") e `<endereço_IP_do_Raspberry_Pi>` pelo endereço IP ou hostname do Raspberry Pi, que pode ser encontrado na lista de dispositivos conectados ao hotspot.
+    ```bash
+    ssh <usuario>@<endereço_IP_do_Raspberry_Pi>
+    ```
+    
+    Substitua `<usuario>` pelo usuário configurado na imagem do SO gravado no cartão microSD (aquele editado em "definições") e `<endereço_IP_do_Raspberry_Pi>` pelo endereço IP ou hostname do Raspberry Pi, que pode ser encontrado na lista de dispositivos conectados ao hotspot.
+
+    > ___
+    > ℹ️ Se você não souber o endereço IP do Raspberry Pi, você pode usar o comando `arp -a` no terminal do seu notebook para listar os dispositivos conectados à rede e encontrar o IP correspondente ao Raspberry Pi.
+    > ___
+
+    > ___
+    > ⚠️ Se houver conflito de certificado, devido ao uso de um IP já existente, você pode usar o comando `ssh-keygen -R <endereço_IP_do_Raspberry_Pi>` para remover a chave antiga e tentar novamente a conexão SSH.
+    > ___
 
 4. Digite a senha configurada anteriormente quando solicitado.
+
+    > ___
+    > ℹ️ Se a conexão for bem-sucedida, você verá o terminal do Raspberry Pi (geralmente algo como `pi@rpi3:~$`).
+    > ___
+
 5. Após conectar-se com sucesso, verifique se o tempo do sistema está correto com o comando:
    ```bash
    date
@@ -87,6 +104,28 @@ Agora que você tem o cartão microSD preparado, insira-o no Raspberry Pi e ligu
    sudo apt update
    sudo apt upgrade -y
    ```
+
+8. Caso necessário, podemos criar uma memória de swap para melhorar o desempenho do Raspberry Pi. Execute os seguintes comandos:
+    ```bash
+    # Instalando o dphys-swapfile
+    sudo apt install dphys-swapfile -y
+    sudo systemctl stop dphys-swapfile
+
+    # Editando o tamanho da memória swap
+    sudo dphys-swapfile swapoff
+    sudo nano /etc/dphys-swapfile
+    # Altere: CONF_SWAPSIZE=1024
+    sudo dphys-swapfile setup
+    sudo dphys-swapfile swapon
+
+    # Reiniciando o serviço
+    sudo systemctl start dphys-swapfile
+    sudo systemctl enable dphys-swapfile
+
+    # Verificando o tamanho da memória swap
+    free -h
+    ```
+    Isso aumentará o tamanho da memória swap para 1GB, o que pode ser útil para compilações pesadas ou aplicações que exigem mais memória. Podemos considerar 1GB de swap como um valor razoável para a maioria dos projetos IoT.
 
 ## Instalação do Arduino CLI no Raspberry Pi
 
