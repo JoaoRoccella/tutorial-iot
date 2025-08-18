@@ -127,6 +127,25 @@ Agora que você tem o cartão microSD preparado, insira-o no Raspberry Pi e ligu
     ```
     Isso aumentará o tamanho da memória swap para 1GB, o que pode ser útil para compilações pesadas ou aplicações que exigem mais memória. Podemos considerar 1GB de swap como um valor razoável para a maioria dos projetos IoT.
 
+9. Verifique se o gerenciamento de energia da interface wlan0 está desativado para evitar desconexões inesperadas. Execute o seguinte comando:
+   ```bash
+   sudo iwconfig wlan0 power off
+   ```
+   Isso garantirá que o Wi-Fi permaneça ativo mesmo quando o Raspberry Pi estiver em modo de economia de energia.
+
+> ___
+> Como dica adicional, você pode configurar o Raspberry Pi para se reconectar automaticamente ao hotspot Wi-Fi caso a conexão seja perdida. Para isso, edite o arquivo `wpa_supplicant.conf` novamente e adicione a linha `scan_ssid=1` dentro do bloco `network`, como mostrado abaixo:
+> ```plaintext
+> network={
+>     ssid="SeuSSID"
+>     psk="SuaSenha"
+>     key_mgmt=WPA-PSK
+>     scan_ssid=1
+> }
+> ```
+> Isso ajudará o Raspberry Pi a encontrar e se reconectar ao hotspot mesmo que ele não esteja visível inicialmente.
+> ___
+
 ## Instalação do Arduino CLI no Raspberry Pi
 
 Para programar o Arduino a partir do Raspberry Pi, você precisará instalar o Arduino CLI. Siga os passos abaixo:
