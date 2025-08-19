@@ -249,6 +249,13 @@ void loop() {
     Serial.println("°C");
 }
 ```
+
+Caso deseje usar interpolação de string, você pode substituir as linhas de impressão por:
+```cpp
+    // Serial.printf("Umidade: %.2f%%, Temperatura: %.2f°C\n", h, t);
+    sprintf(buffer, "Umidade: %.2f%%, Temperatura: %.2f°C", h, t);
+    Serial.println(buffer);
+```
 3. Compile o código para o Arduino com o seguinte comando:
    ```bash
    arduino-cli compile --fqbn arduino:avr:uno dht11.ino
